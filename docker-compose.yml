@@ -1,0 +1,69 @@
+volumes:
+  demo-db:
+
+services:
+  database:
+    hostname: demo-db
+    image: postgres:16
+    ports:
+      - 5432:5432
+    volumes:
+      - demo-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${DATABASE_ACCOUNT}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DB=${DATABASE_DB}
+      - KEYCLOAK_DB=${KEYCLOAK_DB}
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${DATABASE_ACCOUNT} -d ${DATABASE_DB}'" ]
+      interval: 2s
+      timeout: 60s
+      retries: 30
+
+  keycloak:
+    build:
+      context: .
+      dockerfile: ./dev-docker/keycloak/Dockerfile
+    hostname: keycloak
+    volumes:
+      - ./dev-docker/keycloak/seed-data:/opt/keycloak/data/import
+    ports:
+      - 8080:8080
+      - 8787:8787
+      - 9000:9000
+    environment:
+      - KC_DB=postgres
+      - KC_HTTP_RELATIVE_PATH=/auth
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_DB_URL=jdbc:postgresql://${DATABASE_HOST}/${KEYCLOAK_DB}
+      - KC_DB_USERNAME=${DATABASE_ACCOUNT}
+      - KC_DB_PASSWORD=${DATABASE_PASSWORD}
+      - KC_HEALTH_ENABLED=true
+      - DEBUG=true
+      - PROXY_ADDRESS_FORWARDING=TRUE
+      - KC_PROXY=edge
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["NONE"]
+
+  keycloak-export:
+    profiles:
+      - keycloak-export
+    build:
+      context: .
+      dockerfile: ./dev-docker/keycloak/Dockerfile
+    hostname: keycloak
+    volumes:
+      - ./dev-docker/keycloak/seed-data:/opt/keycloak/data/export
+    entrypoint: ["/opt/keycloak/bin/kc.sh", "export", "--dir", "/opt/keycloak/data/export", "--realm", "demo"]
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://${DATABASE_HOST}/${KEYCLOAK_DB}
+      - KC_DB_USERNAME=${DATABASE_ACCOUNT}
+      - KC_DB_PASSWORD=${DATABASE_PASSWORD}
+    depends_on:
+      database:
+        condition: service_healthy

@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: minimal-spring-webapp-oauth2-login
+
+  config:
+    import: optional:file:./.env[.properties], optional:file:./.dev-env[.properties]
+
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak-client:
+            provider: keycloak-provider
+            client-id: ${OAUTH2_CLIENT_ID}
+            client-secret: ${OAUTH2_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            scope: openid,profile
+        provider:
+          keycloak-provider:
+            issuer-uri: ${OAUTH2_ISSUER_URL}
+
+server:
+  port: 8085
+
