@@ -30,7 +30,6 @@ services:
     ports:
       - 8080:8080
       - 8787:8787
-      - 9000:9000
     environment:
       - KC_DB=postgres
       - KC_HTTP_RELATIVE_PATH=/auth
@@ -43,6 +42,7 @@ services:
       - DEBUG=true
       - PROXY_ADDRESS_FORWARDING=TRUE
       - KC_PROXY=edge
+      - JAVA_OPTS=-XX:UseSVE=0
     depends_on:
       database:
         condition: service_healthy
